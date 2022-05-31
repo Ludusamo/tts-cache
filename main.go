@@ -43,7 +43,7 @@ func main() {
 	pool := groupcache.NewHTTPPool(fmt.Sprintf("http://%s:8000", host))
 	pool.Set(p...)
 	server := http.Server{
-		Addr:    fmt.Sprintf("%s:8000", host),
+		Addr:    fmt.Sprintf(":8000"),
 		Handler: pool,
 	}
 	go func() {
@@ -53,7 +53,7 @@ func main() {
 		}
 	}()
 
-	fmt.Println("IP:", host)
+	log.Println("IP:", host)
 
 	groupcache.NewGroup("tts", int64(cacheSize), groupcache.GetterFunc(
 		func(ctx context.Context, id string, dest groupcache.Sink) error {
