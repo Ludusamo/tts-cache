@@ -12,12 +12,16 @@ for caching values in memory.
 
 `docker build -t tts-cache:latest .`
 
+### Create Docker Network
+
+`docker network create tts-net`
+
 ### Run
 
 ```
-docker run -p 8080:80 --net tts-net --env-file ./.env.0 --rm --name tts-cache-0 tts-cache
-docker run -p 8081:80 --net tts-net --env-file ./.env.1 --rm --name tts-cache-1 tts-cache
-docker run -p 8082:80 --net tts-net --env-file ./.env.2 --rm --name tts-cache-2 tts-cache
+docker run -p 8080:80 --net tts-net --env-file ./.env.0 -v "$(pwd)"/secrets:/secrets --rm --name tts-cache-0 tts-cache
+docker run -p 8081:80 --net tts-net --env-file ./.env.1 -v "$(pwd)"/secrets:/secrets --rm --name tts-cache-1 tts-cache
+docker run -p 8082:80 --net tts-net --env-file ./.env.2 -v "$(pwd)"/secrets:/secrets --rm --name tts-cache-2 tts-cache
 ```
 
 You have to create `.env.$(node)` file with the necessary environment variables

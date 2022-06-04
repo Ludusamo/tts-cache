@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -9,34 +10,40 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/mailgun/groupcache/v2"
 )
 
 func getTTS(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	decoder := json.NewDecoder(r.Body)
+	var params TTSParams
+	err := decoder.Decode(&params)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 	var res []byte
-	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*500)
-	defer cancel()
+	ctx := context.Background()
 	group := groupcache.GetGroup("tts")
 	if group == nil {
 		http.Error(w, "group tts not found", http.StatusNotFound)
+		return
 	}
-	err := group.Get(ctx, ps.ByName("id"), groupcache.AllocatingByteSliceSink(&res))
+	key := params.GetKey()
+	log.Println("fetching key:", key)
+	err = group.Get(ctx, key, groupcache.AllocatingByteSliceSink(&res))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 	w.Write(res)
-	w.Write([]byte{'\n'})
 }
 
 func main() {
 	host := os.Getenv("HOST")
 	peers := os.Getenv("PEERS")
 	cacheSize, _ := strconv.Atoi(os.Getenv("CACHE_SIZE"))
-	cacheTime, _ := strconv.Atoi(os.Getenv("CACHE_TIME"))
 	flag.Parse()
 
 	p := strings.Split(peers, ",")
@@ -55,14 +62,9 @@ func main() {
 
 	log.Println("IP:", host)
 
-	groupcache.NewGroup("tts", int64(cacheSize), groupcache.GetterFunc(
-		func(ctx context.Context, id string, dest groupcache.Sink) error {
-			log.Println("getting id", id)
-			return dest.SetBytes([]byte(id), time.Now().Add(time.Minute*time.Duration(cacheTime)))
-		},
-	))
+	groupcache.NewGroup("tts", int64(cacheSize), groupcache.GetterFunc(TTSGetterFunc))
 
 	router := httprouter.New()
-	router.GET("/tts/:id", getTTS)
+	router.POST("/api/tts", getTTS)
 	log.Fatal(http.ListenAndServe(":80", router))
 }
