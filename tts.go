@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	tts "cloud.google.com/go/texttospeech/apiv1"
@@ -31,7 +32,7 @@ func (params TTSParams) GetKey() string {
 func TTSGetterFunc(ctx context.Context, key string, dest groupcache.Sink) error {
 	cacheTime, _ := strconv.Atoi(os.Getenv("CACHE_TIME"))
 	var params TTSParams
-	if err := json.Unmarshal([]byte(key), &params); err != nil {
+	if err := json.Unmarshal([]byte(strings.Replace(key, "+", " ", -1)), &params); err != nil {
 		return err
 	}
 	log.Println("fetching tts audio:", params)
